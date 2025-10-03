@@ -1,10 +1,12 @@
 import { NextFunction, Request, Response } from "express";
 import authServices from "../services/auth.service";
 import RestResponseBody from "../model/restResponseBody";
+import { loginRequestBody } from "../model/loginRequestBody";
+import { registerRequestBody } from "../model/registerRequestBody";
 
 const loginController = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { email, password } = req.body;
+        const { email, password } = req.body as loginRequestBody;
         const result = await authServices.login({ email, password });
         return res.status(200).json(new RestResponseBody({
             success: true,
@@ -23,7 +25,7 @@ const LogoutController = (req: Request, res: Response) => {
 
 const registerController = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { fullName, email, password, confirmPassword } = req.body;
+        const { fullName, email, password, confirmPassword } = req.body as registerRequestBody;
 
         const result = await authServices.register({
             fullName,
