@@ -1,10 +1,10 @@
 import express from 'express'
 import { loginController, registerController } from '../../controllers/auth.controller';
-import { registerValidator } from '../../middlewares/auth.middleware';
+import { loginValidator, registerValidator } from '../../middlewares/auth.middleware';
 
 const authRouter = express.Router();
 
-authRouter.post("/login", loginController);
+authRouter.post("/login", loginValidator, loginController);
 // authRouter.post("/logout", LogoutController);
 authRouter.post("/register", registerValidator, registerController);
 // authRouter.post("/reset-password");
