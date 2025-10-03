@@ -1,0 +1,4 @@
+
+class ErrorWithStatus extends Error {
+
+}

@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2022", // phiên bản JS sau khi compile
+    "module": "CommonJS", // dùng require/module.exports (Node cũ),
+    // nếu Node 18+ thì "ESNext"
+    "rootDir": "src", // code gốc ở đây
+    "outDir": "dist", // build ra đây
+    "strict": true, // bật strict mode (bắt lỗi type nghiêm ngặt)
+    "esModuleInterop": true, // cho phép import mặc định từ lib commonjs
+    "skipLibCheck": true, // bỏ qua check type của node_modules
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": [
+    "src"
+  ], // chỉ compile src/
+  "exclude": [
+    "node_modules",
+    "dist"
+  ] // bỏ qua
+}

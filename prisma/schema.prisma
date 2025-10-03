@@ -1,0 +1,378 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int        @id @default(autoincrement())
+  email     String     @unique
+  password  String
+  fullName  String     @map("full_name")
+  phone     String?
+  status    UserStatus @default(active)
+  createdAt DateTime   @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt DateTime   @updatedAt @map("updated_at") @db.DateTime(0)
+
+  roleId Int?
+  role   Role? @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  carts       Cart[]
+  orders      Order[]
+  reviews     Review[]
+  ReviewVote  ReviewVote[]
+  ReviewReply ReviewReply[]
+
+  @@map("users")
+}
+
+enum UserStatus {
+  active
+  deactive
+}
+
+model Role {
+  id          Int     @id @default(autoincrement())
+  code        String  @unique
+  name        String
+  description String?
+
+  users User[]
+
+  @@map("roles")
+}
+
+model Author {
+  id      Int          @id @default(autoincrement())
+  name    String
+  bio     String?
+  dob     DateTime?    @db.DateTime(0)
+  country String?
+  books   BookAuthor[]
+
+  @@map("authors")
+}
+
+model Category {
+  id       Int            @id @default(autoincrement())
+  name     String
+  slug     String         @unique
+  parentId Int?
+  path     String?
+  parent   Category?      @relation("CategoryToCategory", fields: [parentId], references: [id], onDelete: SetNull)
+  children Category[]     @relation("CategoryToCategory")
+  books    BookCategory[]
+  Book     Book[]
+
+  @@map("categories")
+}
+
+model Book {
+  id                Int        @id @default(autoincrement())
+  isbn              String?    @unique
+  title             String
+  slug              String     @unique
+  description       String?
+  listPrice         Int        @map("list_price")
+  salePrice         Int?       @map("sale_price")
+  currency          String     @default("VND")
+  coverImage        String?    @map("cover_image")
+  publisher         String?
+  publishedAt       DateTime?  @map("published_at") @db.DateTime(0)
+  language          String?
+  pages             Int?
+  stockQty          Int        @default(0) @map("stock_qty")
+  status            BookStatus @default(active)
+  primaryCategoryId Int?       @map("primary_category_id")
+  averageRating     Float?     @default(0) @map("average_rating")
+  reviewsCount      Int?       @default(0) @map("reviews_count")
+
+  authors    BookAuthor[]
+  categories BookCategory[]
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+  reviews    Review[]
+  primaryCat Category?      @relation(fields: [primaryCategoryId], references: [id], onDelete: SetNull)
+
+  @@map("books")
+}
+
+enum BookStatus {
+  active
+  draft
+  out_of_print
+}
+
+model BookAuthor {
+  bookId   Int
+  authorId Int
+  book     Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  author   Author @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@id([bookId, authorId])
+  @@map("book_authors")
+}
+
+model BookCategory {
+  bookId     Int
+  categoryId Int
+  book       Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([bookId, categoryId])
+  @@map("book_categories")
+}
+
+model Cart {
+  id         Int        @id @default(autoincrement())
+  userId     Int?
+  guestToken String?    @map("guest_token")
+  status     CartStatus @default(open)
+  createdAt  DateTime   @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt  DateTime   @updatedAt @map("updated_at") @db.DateTime(0)
+  items      CartItem[]
+  user       User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("carts")
+}
+
+enum CartStatus {
+  open
+  converted
+  abandoned
+}
+
+model CartItem {
+  id                Int @id @default(autoincrement())
+  cartId            Int
+  bookId            Int
+  qty               Int
+  unitPriceSnapshot Int @map("unit_price_snapshot")
+
+  cart Cart @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  book Book @relation(fields: [bookId], references: [id])
+
+  @@unique([cartId, bookId])
+  @@map("cart_items")
+}
+
+model Order {
+  id            Int    @id @default(autoincrement())
+  userId        Int?
+  orderCode     String @unique @map("order_code")
+  grandTotal    Int    @map("grand_total")
+  currency      String @default("VND")
+  subtotal      Int?   @default(0)
+  shippingFee   Int?   @default(0) @map("shipping_fee")
+  taxTotal      Int?   @default(0) @map("tax_total")
+  discountTotal Int?   @default(0) @map("discount_total")
+
+  shipName       String  @map("ship_name")
+  shipPhone      String  @map("ship_phone")
+  shipAddress    String  @map("ship_address")
+  shipCity       String? @map("ship_city")
+  shipState      String? @map("ship_state")
+  shipPostalCode String? @map("ship_postal_code")
+  shipCountry    String? @default("VN") @map("ship_country")
+
+  placedAt DateTime    @default(now()) @map("placed_at") @db.DateTime(0)
+  paidAt   DateTime?   @map("paid_at") @db.DateTime(0)
+  status   OrderStatus @default(pending)
+
+  user      User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  items     OrderItem[]
+  payments  Payment[]
+  shipments Shipment[]
+
+  @@map("orders")
+}
+
+enum OrderStatus {
+  pending
+  paid
+  packing
+  shipped
+  completed
+  canceled
+  refunded
+}
+
+model OrderItem {
+  id                Int      @id @default(autoincrement())
+  orderId           Int
+  bookId            Int
+  bookTitleSnapshot String   @map("book_title_snapshot")
+  qty               Int
+  unitPriceSnapshot Int      @map("unit_price_snapshot")
+  lineTotal         Int      @map("line_total")
+  createdAt         DateTime @default(now()) @map("created_at") @db.DateTime(0)
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  book  Book  @relation(fields: [bookId], references: [id])
+
+  @@map("order_items")
+}
+
+model Payment {
+  id            Int       @id @default(autoincrement())
+  orderId       Int
+  provider      String
+  providerTxnId String?   @map("provider_txn_id")
+  amount        Int
+  currency      String    @default("VND")
+  status        String
+  paidAt        DateTime? @map("paid_at") @db.DateTime(0)
+  rawPayload    Json?     @map("raw_payload")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+model ShippingProvider {
+  id          Int            @id @default(autoincrement())
+  name        String
+  code        String         @unique
+  contactInfo String?        @map("contact_info")
+  flatRate    Int            @map("flat_rate")
+  status      ProviderStatus @default(active)
+  createdAt   DateTime       @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt   DateTime       @updatedAt @map("updated_at") @db.DateTime(0)
+  shipments   Shipment[]
+
+  @@map("shipping_providers")
+}
+
+enum ProviderStatus {
+  active
+  inactive
+}
+
+model Shipment {
+  id                 Int            @id @default(autoincrement())
+  orderId            Int
+  shippingProviderId Int            @map("shipping_provider_id")
+  trackingNumber     String?        @map("tracking_number")
+  status             ShipmentStatus @default(pending)
+  shippedAt          DateTime?      @map("shipped_at") @db.DateTime(0)
+  deliveredAt        DateTime?      @map("delivered_at") @db.DateTime(0)
+  note               String?
+
+  order    Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  provider ShippingProvider @relation(fields: [shippingProviderId], references: [id])
+
+  @@map("shipments")
+}
+
+enum ShipmentStatus {
+  pending
+  shipped
+  delivered
+  returning
+  failed
+}
+
+model Promotion {
+  id                Int             @id @default(autoincrement())
+  code              String          @unique
+  name              String
+  description       String?
+  status            PromotionStatus @default(draft)
+  startsAt          DateTime        @map("starts_at") @db.DateTime(0)
+  endsAt            DateTime        @map("ends_at") @db.DateTime(0)
+  method            PromotionMethod
+  value             Int
+  maxDiscountAmount Int?            @map("max_discount_amount")
+  minOrderSubtotal  Int?            @map("min_order_subtotal")
+  totalQuantity     Int             @map("total_quantity")
+  usedQuantity      Int             @default(0) @map("used_quantity")
+  channels          String?
+  metaJson          Json?           @map("meta_json")
+  createdAt         DateTime        @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt         DateTime        @updatedAt @map("updated_at") @db.DateTime(0)
+
+  @@map("promotions")
+}
+
+enum PromotionStatus {
+  draft
+  active
+  expired
+  paused
+}
+
+enum PromotionMethod {
+  percent_off
+  amount_off
+  free_ship
+}
+
+model Review {
+  id               Int          @id @default(autoincrement())
+  bookId           Int
+  userId           Int
+  rating           Int
+  title            String?
+  content          String?
+  purchaseVerified Boolean      @default(false) @map("purchase_verified")
+  moderationStatus ReviewStatus @default(pending) @map("moderation_status")
+  createdAt        DateTime     @default(now()) @map("created_at") @db.DateTime(0)
+
+  book    Book          @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  media   ReviewMedia[]
+  votes   ReviewVote[]
+  replies ReviewReply[]
+
+  @@unique([bookId, userId])
+  @@map("reviews")
+}
+
+enum ReviewStatus {
+  pending
+  approved
+  rejected
+}
+
+model ReviewMedia {
+  id        Int    @id @default(autoincrement())
+  reviewId  Int
+  mediaUrl  String @map("media_url")
+  mediaType String @map("media_type")
+  review    Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@map("review_media")
+}
+
+model ReviewVote {
+  id       Int            @id @default(autoincrement())
+  reviewId Int
+  userId   Int
+  vote     ReviewVoteType
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("review_votes")
+}
+
+enum ReviewVoteType {
+  helpful
+  not_helpful
+}
+
+model ReviewReply {
+  id        Int      @id @default(autoincrement())
+  reviewId  Int
+  userId    Int
+  content   String
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(0)
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("review_replies")
+}
