@@ -1,4 +1,5 @@
 import { prisma } from "../config/prismaClient";
+import { ErrorWithStatus } from "../model/error";
 import { signToken } from "../utils/jwt";
 import { getTimeNow, hashPassword, verifyPassword } from "../utils/utils";
 
@@ -27,11 +28,17 @@ class AuthServices {
         });
 
         if (!user) {
-            throw new Error("Login Failed");
+            throw new ErrorWithStatus({
+                message: "User is not existed",
+                status: 422
+            });
         }
 
         if (!(await verifyPassword(password, user.password))) {
-            return new Error("Login failed");
+            throw new ErrorWithStatus({
+                message: "Password is incorrect",
+                status: 401
+            });
         }
 
         const payload = {
