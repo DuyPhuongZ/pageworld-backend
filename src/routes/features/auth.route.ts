@@ -4,7 +4,7 @@ import { loginController, LogoutController, registerController } from '../../con
 const authRouter = express.Router();
 
 authRouter.post("/login", loginController);
-authRouter.post("/logout", LogoutController);
+// authRouter.post("/logout", LogoutController);
 authRouter.post("/register", registerController);
 // authRouter.post("/reset-password");
 // authRouter.post("/forgot-password");

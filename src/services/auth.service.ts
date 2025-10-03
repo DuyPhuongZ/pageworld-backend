@@ -20,8 +20,6 @@ class AuthServices {
     }
 
     async login({ email, password }: { email: string, password: string }) {
-        const passwordEncrypted = await hashPassword(password);
-        console.log(passwordEncrypted);
         const user = await prisma.user.findFirst({
             where: {
                 email: email,
@@ -36,9 +34,14 @@ class AuthServices {
             return new Error("Login failed");
         }
 
-        const [access_token, refresh_token] = await Promise.all([this.signAccessToken(user), this.signRefreshToken(user)]);
+        const payload = {
+            email: user.email,
+            roleId: user.roleId
+        }
+
+        const [access_token, refresh_token] = await Promise.all([this.signAccessToken(payload), this.signRefreshToken(payload)]);
         return {
-            user,
+            user: payload,
             access_token,
             refresh_token
         }
